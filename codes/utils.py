@@ -46,7 +46,7 @@ def imagefiles2arrs(filenames):
     elif len(img_shape)==2:
         images_arr = np.zeros((len(filenames), img_shape[0], img_shape[1]), dtype=np.float32)
     
-    for file_index in xrange(len(filenames)):
+    for file_index in range(len(filenames)):
         img = Image.open(filenames[file_index])
         images_arr[file_index] = np.asarray(img).astype(np.float32)
     
@@ -94,7 +94,7 @@ def discriminator_shape(n, d_out_shape):
 def input2discriminator(real_img_patches, real_vessel_patches, fake_vessel_patches, d_out_shape):
     real=np.concatenate((real_img_patches,real_vessel_patches), axis=3)
     fake=np.concatenate((real_img_patches,fake_vessel_patches), axis=3)
-    
+
     d_x_batch=np.concatenate((real,fake), axis=0)
     
     # real : 1, fake : 0
@@ -110,25 +110,43 @@ def input2gan(real_img_patches, real_vessel_patches, d_out_shape):
     return g_x_batch, g_y_batch
     
 def print_metrics(itr, **kargs):
-    print "*** Round {}  ====> ".format(itr),
+    print("*** Round {}  ====> ".format(itr))
     for name, value in kargs.items():
-        print ( "{} : {}, ".format(name, value)),
-    print ""
+        print("{} : {}, ".format(name, value))
+    print("")
     sys.stdout.flush()
 
 class TrainBatchFetcher(Iterator):
     """
     fetch batch of original images and vessel images
     """
-    def __init__(self, train_imgs, train_vessels, batch_size):
+    def __init__(self, train_imgs, train_vessels, batch_size, train_indices, shape):
         self.train_imgs=train_imgs
         self.train_vessels=train_vessels
-        self.n_train_imgs=self.train_imgs.shape[0]
+        self.shape = shape
+        self.train_indices = train_indices
+        self.n_train_imgs=len(self.train_indices)
         self.batch_size=batch_size
-        
+
     def next(self):
         indices=list(np.random.choice(self.n_train_imgs, self.batch_size))
-        return self.train_imgs[indices,:,:,:], self.train_vessels[indices,:,:,:] 
+        train_imgs = []
+        train_vessels = []
+
+        for idx in indices:
+            if self.batch_size != 2:
+                print(idx)
+            train_imgs.append(np.load(self.train_imgs[self.train_indices[idx]]))
+            train_vessels.append(np.load(self.train_vessels[self.train_indices[idx]]))
+        train_imgs=np.asarray(train_imgs)
+        train_vessels=np.asarray(train_vessels)
+        train_vessels=train_vessels.reshape(self.shape)
+        return train_imgs, train_vessels
+
+    @staticmethod
+    def load_numpy(pathes):
+        datas = [np.load(path) for path in pathes]
+        return datas
 
 def AUC_ROC(true_vessel_arr, pred_vessel_arr, save_fname):
     """
@@ -149,11 +167,11 @@ def plot_AUC_ROC(fprs,tprs,method_names,fig_dir):
     indices=[6,2,5,3,4,7,1,0] if len(fprs)==8 else [3,1,2,4,0] 
     
     # print auc  
-    print "****** ROC AUC ******"
-    print "CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_roc*.npy)"
+    print( "****** ROC AUC ******")
+    print("CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_roc*.npy)")
     for index in indices:
         if method_names[index]!='CRFs' and method_names[index]!='2nd_manual':
-            print "{} : {:04}".format(method_names[index],auc(fprs[index],tprs[index]))
+            print("{} : {:04}".format(method_names[index],auc(fprs[index],tprs[index])))
     
     # plot results
     for index in indices:
@@ -183,11 +201,11 @@ def plot_AUC_PR(precisions, recalls, method_names, fig_dir):
     indices=[6,2,5,3,4,7,1,0] if len(precisions)==8 else [3,1,2,4,0] 
 
     # print auc  
-    print "****** Precision Recall AUC ******"
-    print "CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_pr*.npy)"
+    print("****** Precision Recall AUC ******")
+    print("CAVEAT : AUC of V-GAN with 8bit images might be lower than the floating point array (check <home>/pretrained/auc_pr*.npy)")
     for index in indices:
         if method_names[index]!='CRFs' and method_names[index]!='2nd_manual':
-            print "{} : {:04}".format(method_names[index],auc(recalls[index],precisions[index]))
+            print("{} : {:04}".format(method_names[index],auc(recalls[index],precisions[index])))
     
     # plot results
     for index in indices:
@@ -302,7 +320,116 @@ def random_perturbation(imgs):
         im=en.enhance(random.uniform(0.8,1.2))
         imgs[i,...]= np.asarray(im).astype(np.float32)
     return imgs 
-    
+
+
+def save_numpy(root_path, data, idx):
+    for i, fundus in enumerate(data):
+        path = ("{0}_{1}".format(root_path,(idx+i)))
+        print(path)
+        np.save(path, fundus)
+
+def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
+    if dataset=='DRIVE':
+        img_files, vessel_files, mask_files = DRIVE_files(target_dir)
+    elif dataset=='STARE':
+        img_files, vessel_files, mask_files = STARE_files(target_dir)
+
+    # load images
+    fundus_idx = 0
+    vessel_idx = 0
+    fundus_imgs=imagefiles2arrs(img_files)
+
+
+    vessel_imgs=imagefiles2arrs(vessel_files)/255
+    fundus_imgs=pad_imgs(fundus_imgs, img_size)
+
+    vessel_imgs=pad_imgs(vessel_imgs, img_size)
+    assert(np.min(vessel_imgs)==0 and np.max(vessel_imgs)==1)
+    if mask:
+        mask_imgs=imagefiles2arrs(mask_files)/255
+        mask_imgs=pad_imgs(mask_imgs, img_size)
+        assert(np.min(mask_imgs)==0 and np.max(mask_imgs)==1)
+    # augmentation
+    if augmentation:
+        # augment the original image (flip, rotate)
+        all_fundus_imgs=[fundus_imgs]
+        all_vessel_imgs=[vessel_imgs]
+        flipped_imgs=fundus_imgs[:,:,::-1,:]    # flipped imgs
+        flipped_vessels=vessel_imgs[:,:,::-1]
+
+        all_fundus_imgs.append(flipped_imgs)
+        all_vessel_imgs.append(flipped_vessels)
+
+        print(target_dir+"/fundus/")
+        all_fundus_imgs = np.asarray(all_fundus_imgs)
+        all_vessel_imgs = np.asarray(all_vessel_imgs)
+        print(all_fundus_imgs.shape)
+        all_fundus_imgs = np.concatenate(all_fundus_imgs, axis=0)
+        all_vessel_imgs = np.concatenate(all_vessel_imgs, axis=0)
+        print(all_fundus_imgs.shape)
+        for index in range(all_fundus_imgs.shape[0]):
+            mean=np.mean(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+            std=np.std(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+            assert len(mean)==3 and len(std)==3
+            all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
+
+        for image in all_fundus_imgs:
+            min_val = np.min(image)
+            image = image-min_val
+            max_val = np.max(image)
+            image /= max_val
+            print(image.shape)
+            plt.imshow(image)
+            plt.show()
+
+        save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
+        save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)
+        fundus_idx = fundus_idx + len(all_fundus_imgs)
+        print(fundus_idx)
+        vessel_idx = vessel_idx + len(all_vessel_imgs)
+
+        for angle in range(3,360,3):  # rotated imgs 3~360
+            print(angle)
+            all_fundus_imgs = []
+            all_vessel_imgs = []
+            all_fundus_imgs.append(random_perturbation(rotate(fundus_imgs, angle, axes=(1, 2), reshape=False)))
+            all_fundus_imgs.append(random_perturbation(rotate(flipped_imgs, angle, axes=(1, 2), reshape=False)))
+            all_vessel_imgs.append(rotate(vessel_imgs, angle, axes=(1, 2), reshape=False))
+            all_vessel_imgs.append(rotate(flipped_vessels, angle, axes=(1, 2), reshape=False))
+
+            all_fundus_imgs = np.asarray(all_fundus_imgs)
+            all_vessel_imgs = np.asarray(all_vessel_imgs)
+
+            all_fundus_imgs = np.concatenate(all_fundus_imgs, axis=0)
+            all_vessel_imgs = np.concatenate(all_vessel_imgs, axis=0)
+
+            for index in range(all_fundus_imgs.shape[0]):
+                mean=np.mean(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+                std=np.std(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+                assert len(mean)==3 and len(std)==3
+                all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
+
+            save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
+            save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)
+            fundus_idx = fundus_idx + len(all_fundus_imgs)
+            vessel_idx = vessel_idx + len(all_vessel_imgs)
+
+        fundus_imgs=np.concatenate(all_fundus_imgs,axis=0)
+        vessel_imgs=np.round((np.concatenate(all_vessel_imgs,axis=0)))
+
+    # z score with mean, std of each image
+    n_all_imgs=fundus_imgs.shape[0]
+    for index in range(n_all_imgs):
+        mean=np.mean(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        std=np.std(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        assert len(mean)==3 and len(std)==3
+        fundus_imgs[index,...]=(fundus_imgs[index,...]-mean)/std
+
+    if mask:
+        return fundus_imgs, vessel_imgs, mask_imgs
+    else:
+        return fundus_imgs, vessel_imgs
+
 def get_imgs(target_dir, augmentation, img_size, dataset, mask=False):
     
     if dataset=='DRIVE':

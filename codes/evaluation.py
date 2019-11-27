@@ -1,4 +1,4 @@
-import utils
+import codes.utils as utils
 import os
 from PIL import Image
 import numpy as np
@@ -57,9 +57,9 @@ for dataset in datasets:
             # skip the ground truth
             if "1st_manual" not in result:
                 # print metrics
-                print "-- {} --".format(os.path.basename(result))
-                print "dice coefficient : {}".format(utils.dice_coefficient(gt_vessels,pred_vessels, masks))
-                print "f1 score : {}, accuracy : {}, specificity : {}, sensitivity : {}".format(*utils.misc_measures(gt_vessels,pred_vessels, masks))
+                print("-- {} --".format(os.path.basename(result)))
+                print("dice coefficient : {}".format(utils.dice_coefficient(gt_vessels,pred_vessels, masks)))
+                print("f1 score : {}, accuracy : {}, specificity : {}, sensitivity : {}".format(*utils.misc_measures(gt_vessels,pred_vessels, masks)))
 
                 # compute false positive rate, true positive graph
                 method=os.path.basename(result)

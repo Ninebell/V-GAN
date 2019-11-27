@@ -1,16 +1,17 @@
 from PIL import Image
 from keras.models import model_from_json
 import os
-import utils
+import codes.utils as utils
 import numpy as np
 
 # set filepath
 datasets=["DRIVE","STARE"]
+# datasets=["DRIVE"]
 fundus_dir="../data/{}/test/images/"
 mask_dir="../data/{}/test/mask/"
 out_dir="../inference_outputs/{}"
-f_model="../pretrained/{}_best.json"
-f_weights="../pretrained/{}_best.h5"
+f_model="../pretrained/{}_best_1.json"
+f_weights="../pretrained/{}_best_1.h5"
 
 for dataset in datasets:     
     # make directory
@@ -28,7 +29,7 @@ for dataset in datasets:
     fundus_files=utils.all_files_under(fundus_dir.format(dataset))
     mask_files=utils.all_files_under(mask_dir.format(dataset))
     for index,fundus_file in enumerate(fundus_files):
-        print "processing {}...".format(fundus_file)
+        print("processing {}...".format(fundus_file))
         # load imgs
         img=utils.imagefiles2arrs([fundus_file])
         mask=utils.imagefiles2arrs([mask_files[index]])
