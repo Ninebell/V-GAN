@@ -35,15 +35,15 @@ def generator(img_size, n_filters, name='g'):
     conv1 = Conv2D(n_filters, (k, k),  padding=padding)(conv1)
     conv1 = BatchNormalization(scale=False, axis=3)(conv1)
     conv1 = Activation('relu')(conv1)    
-    pool1 = MaxPooling2D(pool_size=(s, s))(conv1)
+    pool1 = MaxPooling2D(pool_size=(s, s))(conv1)                   # /2
     
     conv2 = Conv2D(2*n_filters, (k, k),  padding=padding)(pool1)
     conv2 = BatchNormalization(scale=False, axis=3)(conv2)
     conv2 = Activation('relu')(conv2)    
     conv2 = Conv2D(2*n_filters, (k, k),  padding=padding)(conv2)
     conv2 = BatchNormalization(scale=False, axis=3)(conv2)
-    conv2 = Activation('relu')(conv2)    
-    pool2 = MaxPooling2D(pool_size=(s, s))(conv2)
+    conv2 = Activation('relu')(conv2)
+    pool2 = MaxPooling2D(pool_size=(s, s))(conv2)                   # /2
      
     conv3 = Conv2D(4*n_filters, (k, k),  padding=padding)(pool2)
     conv3 = BatchNormalization(scale=False, axis=3)(conv3)
@@ -51,7 +51,7 @@ def generator(img_size, n_filters, name='g'):
     conv3 = Conv2D(4*n_filters, (k, k),  padding=padding)(conv3)
     conv3 = BatchNormalization(scale=False, axis=3)(conv3)
     conv3 = Activation('relu')(conv3)    
-    pool3 = MaxPooling2D(pool_size=(s, s))(conv3)
+    pool3 = MaxPooling2D(pool_size=(s, s))(conv3)                   # /2
     
     conv4 = Conv2D(8*n_filters, (k, k),  padding=padding)(pool3)
     conv4 = BatchNormalization(scale=False, axis=3)(conv4)
@@ -59,7 +59,7 @@ def generator(img_size, n_filters, name='g'):
     conv4 = Conv2D(8*n_filters, (k, k),  padding=padding)(conv4)
     conv4 = BatchNormalization(scale=False, axis=3)(conv4)
     conv4 = Activation('relu')(conv4)    
-    pool4 = MaxPooling2D(pool_size=(s, s))(conv4)
+    pool4 = MaxPooling2D(pool_size=(s, s))(conv4)                   # /2
     
     conv5 = Conv2D(16*n_filters, (k, k),  padding=padding)(pool4)
     conv5 = BatchNormalization(scale=False, axis=3)(conv5)

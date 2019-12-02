@@ -77,11 +77,12 @@ if not os.path.isdir(model_out_dir):
 if not os.path.isdir(auc_out_dir):
     os.makedirs(auc_out_dir)
 
+
 # train_imgs, train_vessels =utils.save_imgs(train_dir, augmentation=True, img_size=img_size, dataset=dataset)
 # exit(0)
 # set training and validation dataset
 # train_imgs, train_vessels =utils.get_imgs(train_dir, augmentation=True, img_size=img_size, dataset=dataset)
-
+print("load train data")
 train_imgs = os.listdir(train_dir+"/fundus/")
 train_imgs = [os.path.join(train_dir+"/fundus/", file_name) for file_name in train_imgs]
 # train_imgs = train_imgs[:100]
@@ -109,8 +110,10 @@ for i in range(n_all_imgs):
 validate_indices = np.asarray(validate_indices, np.int)
 validate_batch_fetcher=utils.TrainBatchFetcher(train_imgs, train_vessels, batch_size, validate_indices, (-1, img_size[0], img_size[1], 1))
 # set test dataset
+print("load test data")
 test_imgs, test_vessels, test_masks=utils.get_imgs(test_dir, augmentation=False, img_size=img_size, dataset=dataset, mask=True)
 
+print("train set: {0}, validate set: {1}, test set: {2}".format(len(train_indices), len(validate_indices), test_imgs.shape[0]))
 # create networks
 g = generator(img_size, n_filters_g)
 if discriminator=='pixel':
