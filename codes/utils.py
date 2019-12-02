@@ -363,24 +363,13 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
         print(target_dir+"/fundus/")
         all_fundus_imgs = np.asarray(all_fundus_imgs)
         all_vessel_imgs = np.asarray(all_vessel_imgs)
-        print(all_fundus_imgs.shape)
         all_fundus_imgs = np.concatenate(all_fundus_imgs, axis=0)
         all_vessel_imgs = np.concatenate(all_vessel_imgs, axis=0)
-        print(all_fundus_imgs.shape)
         for index in range(all_fundus_imgs.shape[0]):
             mean=np.mean(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
             std=np.std(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
             assert len(mean)==3 and len(std)==3
             all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
-
-        for image in all_fundus_imgs:
-            min_val = np.min(image)
-            image = image-min_val
-            max_val = np.max(image)
-            image /= max_val
-            print(image.shape)
-            plt.imshow(image)
-            plt.show()
 
         save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
         save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)

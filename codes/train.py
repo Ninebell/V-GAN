@@ -78,6 +78,7 @@ if not os.path.isdir(auc_out_dir):
     os.makedirs(auc_out_dir)
 
 # train_imgs, train_vessels =utils.save_imgs(train_dir, augmentation=True, img_size=img_size, dataset=dataset)
+# exit(0)
 # set training and validation dataset
 # train_imgs, train_vessels =utils.get_imgs(train_dir, augmentation=True, img_size=img_size, dataset=dataset)
 
@@ -132,8 +133,8 @@ validate_accuracies = []
 # start training
 scheduler=utils.Scheduler(n_train_imgs//batch_size, n_train_imgs//batch_size, schedules, init_lr) if alpha_recip>0 else utils.Scheduler(0, n_train_imgs//batch_size, schedules, init_lr)
 figure = plt.figure()
-ax1 = figure.add_subplot(211)
-ax2 = figure.add_subplot(212)
+ax1 = figure.add_subplot(311)
+ax2 = figure.add_subplot(312)
 ax3 = figure.add_subplot(313)
 
 train_loss = 0
