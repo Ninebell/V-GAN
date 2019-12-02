@@ -397,7 +397,7 @@ def _multi_save_imgs(target_dir, augmentation, img_size, dataset, mask=False, ta
         save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), normalize_fundus_resize, fundus_idx)
         save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs_resize, vessel_idx)
 
-        for angle in range(3,360,6):  # rotated imgs 3~360
+        for angle in range(6,360,6):  # rotated imgs 3~360
             print(angle)
             all_fundus_imgs = []
             all_vessel_imgs = []
@@ -493,22 +493,8 @@ def _origin_save_imgs(target_dir, augmentation, img_size, dataset, mask=False, t
             assert len(mean)==3 and len(std)==3
             all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
 
-<<<<<<< HEAD
-        save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
-        save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)
-=======
-        for image in all_fundus_imgs:
-            min_val = np.min(image)
-            image = image-min_val
-            max_val = np.max(image)
-            image /= max_val
-            print(image.shape)
-            plt.imshow(image)
-            plt.show()
-
         save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), all_fundus_imgs, fundus_idx)
         save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs, vessel_idx)
->>>>>>> d97d785bc29b338a82405f16f41affc5c9fd8539
         fundus_idx = fundus_idx + len(all_fundus_imgs)
         print(fundus_idx)
         vessel_idx = vessel_idx + len(all_vessel_imgs)
@@ -557,8 +543,8 @@ def _origin_save_imgs(target_dir, augmentation, img_size, dataset, mask=False, t
 
 
 def save_imgs(target_dir, augmentation, img_size, dataset, mask=False, tag=None):
-    os.makedirs(target_dir+"/fundus_{0}/fundus_img".format(tag),exist_ok=True)
-    os.makedirs(target_dir+"/vessel_{0}/fundus_img".format(tag),exist_ok=True)
+    os.makedirs(target_dir+"/fundus_{0}/".format(tag),exist_ok=True)
+    os.makedirs(target_dir+"/vessel_{0}/".format(tag),exist_ok=True)
     if tag == "multi":
         return _multi_save_imgs(target_dir,augmentation,img_size,dataset,mask,tag)
     else:
