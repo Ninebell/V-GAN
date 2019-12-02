@@ -3,7 +3,8 @@ codes/STARE/*
 inference_outputs/*/*.ppm
 pretrained/*
 evaluation/*/mesures/*
-data/DRIVE/training/vessel/*
-data/DRIVE/training/fundus/*
-data/STARE/training/vessel/*
-data/STARE/training/fundus/*
+data/DRIVE/training/vessel*/*
+data/DRIVE/training/fundus*/*
+data/STARE/training/vessel*/*
+data/STARE/training/fundus*/*
+
