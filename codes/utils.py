@@ -328,7 +328,15 @@ def save_numpy(root_path, data, idx):
         print(path)
         np.save(path, fundus)
 
-def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
+def normalize(imgs):
+    for index in range(imgs.shape[0]):
+        mean=np.mean(imgs[index,...][imgs[index,...,0] > 40.0],axis=0)
+        std=np.std(imgs[index,...][imgs[index,...,0] > 40.0],axis=0)
+        assert len(mean)==3 and len(std)==3
+        imgs[index,...]=(imgs[index,...]-mean)/std
+    return imgs
+
+def _multi_save_imgs(target_dir, augmentation, img_size, dataset, mask=False, tag=None):
     if dataset=='DRIVE':
         img_files, vessel_files, mask_files = DRIVE_files(target_dir)
     elif dataset=='STARE':
@@ -360,7 +368,121 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
         all_fundus_imgs.append(flipped_imgs)
         all_vessel_imgs.append(flipped_vessels)
 
-        print(target_dir+"/fundus/")
+        print(target_dir+"/fundus_{0}/".format(tag))
+        all_fundus_imgs = np.asarray(all_fundus_imgs)
+        all_vessel_imgs = np.asarray(all_vessel_imgs)
+        all_fundus_imgs = np.concatenate(all_fundus_imgs, axis=0)
+        all_vessel_imgs = np.concatenate(all_vessel_imgs, axis=0)
+
+        all_fundus_imgs_resize = [np.resize(img, (img.shape[0]//2,img.shape[1]//2,img.shape[2])) for img in all_fundus_imgs]
+        all_vessel_imgs_resize = [np.resize(img, (img.shape[0]//2,img.shape[1]//2)) for img in all_vessel_imgs]
+
+        all_fundus_imgs_resize = np.asarray(all_fundus_imgs_resize)
+        all_vessel_imgs_resize = np.asarray(all_vessel_imgs_resize)
+
+        normalize_fundus = normalize(all_fundus_imgs)
+        normalize_fundus_resize = normalize(all_fundus_imgs_resize)
+        # for index in range(all_fundus_imgs.shape[0]):
+        #     mean=np.mean(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+        #     std=np.std(all_fundus_imgs[index,...][all_fundus_imgs[index,...,0] > 40.0],axis=0)
+        #     assert len(mean)==3 and len(std)==3
+        #     all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
+
+        save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), normalize_fundus, fundus_idx)
+        save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs, vessel_idx)
+
+        fundus_idx = fundus_idx + len(all_fundus_imgs)
+        vessel_idx = vessel_idx + len(all_vessel_imgs)
+
+        save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), normalize_fundus_resize, fundus_idx)
+        save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs_resize, vessel_idx)
+
+        for angle in range(3,360,6):  # rotated imgs 3~360
+            print(angle)
+            all_fundus_imgs = []
+            all_vessel_imgs = []
+            all_fundus_imgs.append(random_perturbation(rotate(fundus_imgs, angle, axes=(1, 2), reshape=False)))
+            all_fundus_imgs.append(random_perturbation(rotate(flipped_imgs, angle, axes=(1, 2), reshape=False)))
+            all_vessel_imgs.append(rotate(vessel_imgs, angle, axes=(1, 2), reshape=False))
+            all_vessel_imgs.append(rotate(flipped_vessels, angle, axes=(1, 2), reshape=False))
+
+            all_fundus_imgs = np.asarray(all_fundus_imgs)
+            all_vessel_imgs = np.asarray(all_vessel_imgs)
+
+            all_fundus_imgs = np.concatenate(all_fundus_imgs, axis=0)
+            all_vessel_imgs = np.concatenate(all_vessel_imgs, axis=0)
+
+            all_fundus_imgs_resize = [np.resize(img, (img.shape[0]//2,img.shape[1]//2,img.shape[2])) for img in all_fundus_imgs]
+            all_vessel_imgs_resize = [np.resize(img, (img.shape[0]//2,img.shape[1]//2)) for img in all_vessel_imgs]
+
+            all_fundus_imgs_resize = np.asarray(all_fundus_imgs_resize)
+            all_vessel_imgs_resize = np.asarray(all_vessel_imgs_resize)
+
+            normalize_fundus = normalize(all_fundus_imgs)
+            normalize_fundus_resize = normalize(all_fundus_imgs_resize)
+
+            save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), normalize_fundus, fundus_idx)
+            save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs, vessel_idx)
+
+            fundus_idx = fundus_idx + len(all_fundus_imgs)
+            vessel_idx = vessel_idx + len(all_vessel_imgs)
+
+            save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), normalize_fundus_resize, fundus_idx)
+            save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs_resize, vessel_idx)
+
+            fundus_idx = fundus_idx + len(all_fundus_imgs)
+            vessel_idx = vessel_idx + len(all_vessel_imgs)
+
+        fundus_imgs=np.concatenate(all_fundus_imgs,axis=0)
+        vessel_imgs=np.round((np.concatenate(all_vessel_imgs,axis=0)))
+
+    # z score with mean, std of each image
+    n_all_imgs=fundus_imgs.shape[0]
+    for index in range(n_all_imgs):
+        mean=np.mean(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        std=np.std(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        assert len(mean)==3 and len(std)==3
+        fundus_imgs[index,...]=(fundus_imgs[index,...]-mean)/std
+
+    if mask:
+        return fundus_imgs, vessel_imgs, mask_imgs
+    else:
+        return fundus_imgs, vessel_imgs
+
+
+def _origin_save_imgs(target_dir, augmentation, img_size, dataset, mask=False, tag=None):
+    if dataset=='DRIVE':
+        img_files, vessel_files, mask_files = DRIVE_files(target_dir)
+    elif dataset=='STARE':
+        img_files, vessel_files, mask_files = STARE_files(target_dir)
+
+    # load images
+    fundus_idx = 0
+    vessel_idx = 0
+    fundus_imgs=imagefiles2arrs(img_files)
+
+
+    vessel_imgs=imagefiles2arrs(vessel_files)/255
+    fundus_imgs=pad_imgs(fundus_imgs, img_size)
+
+    vessel_imgs=pad_imgs(vessel_imgs, img_size)
+    assert(np.min(vessel_imgs)==0 and np.max(vessel_imgs)==1)
+    if mask:
+        mask_imgs=imagefiles2arrs(mask_files)/255
+        mask_imgs=pad_imgs(mask_imgs, img_size)
+        assert(np.min(mask_imgs)==0 and np.max(mask_imgs)==1)
+    # augmentation
+    if augmentation:
+        # augment the original image (flip, rotate)
+        all_fundus_imgs=[fundus_imgs]
+        all_vessel_imgs=[vessel_imgs]
+        flipped_imgs=fundus_imgs[:,:,::-1,:]    # flipped imgs
+        flipped_vessels=vessel_imgs[:,:,::-1]
+
+        all_fundus_imgs.append(flipped_imgs)
+        all_vessel_imgs.append(flipped_vessels)
+
+        print(target_dir+"/fundus_{0}/".format(tag))
         all_fundus_imgs = np.asarray(all_fundus_imgs)
         all_vessel_imgs = np.asarray(all_vessel_imgs)
         print(all_fundus_imgs.shape)
@@ -382,8 +504,8 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
             plt.imshow(image)
             plt.show()
 
-        save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
-        save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)
+        save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), all_fundus_imgs, fundus_idx)
+        save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs, vessel_idx)
         fundus_idx = fundus_idx + len(all_fundus_imgs)
         print(fundus_idx)
         vessel_idx = vessel_idx + len(all_vessel_imgs)
@@ -409,8 +531,8 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
                 assert len(mean)==3 and len(std)==3
                 all_fundus_imgs[index,...]=(all_fundus_imgs[index,...]-mean)/std
 
-            save_numpy(target_dir+"/fundus/fundus_img", all_fundus_imgs, fundus_idx)
-            save_numpy(target_dir+"/vessel/vessel_img", all_vessel_imgs, vessel_idx)
+            save_numpy(target_dir+"/fundus_{0}/fundus_img".format(tag), all_fundus_imgs, fundus_idx)
+            save_numpy(target_dir+"/vessel_{0}/vessel_img".format(tag), all_vessel_imgs, vessel_idx)
             fundus_idx = fundus_idx + len(all_fundus_imgs)
             vessel_idx = vessel_idx + len(all_vessel_imgs)
 
@@ -420,8 +542,8 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
     # z score with mean, std of each image
     n_all_imgs=fundus_imgs.shape[0]
     for index in range(n_all_imgs):
-        mean=np.mean(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
-        std=np.std(fundus_imgs[index,...][fundus_imgs[index,...,0] > 40.0],axis=0)
+        mean=np.mean(fundus_imgs[index, ...][fundus_imgs[index, ..., 0] > 40.0], axis=0)
+        std=np.std(fundus_imgs[index, ...][fundus_imgs[index, ..., 0] > 40.0], axis=0)
         assert len(mean)==3 and len(std)==3
         fundus_imgs[index,...]=(fundus_imgs[index,...]-mean)/std
 
@@ -429,6 +551,16 @@ def save_imgs(target_dir, augmentation, img_size, dataset, mask=False):
         return fundus_imgs, vessel_imgs, mask_imgs
     else:
         return fundus_imgs, vessel_imgs
+
+
+def save_imgs(target_dir, augmentation, img_size, dataset, mask=False, tag=None):
+    os.makedirs(target_dir+"/fundus_{0}/fundus_img".format(tag),exist_ok=True)
+    os.makedirs(target_dir+"/vessel_{0}/fundus_img".format(tag),exist_ok=True)
+    if tag == "multi":
+        return _multi_save_imgs(target_dir,augmentation,img_size,dataset,mask,tag)
+    else:
+        return _origin_save_imgs(target_dir,augmentation,img_size,dataset,mask,tag)
+
 
 def get_imgs(target_dir, augmentation, img_size, dataset, mask=False):
     
